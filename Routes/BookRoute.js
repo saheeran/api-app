@@ -3,8 +3,11 @@ const BookController = require("../Controller/BookController");
 const BookRouter = express.Router();
 
 
-BookRouter.get('/add', (req, res) => {
-    BookController.postBook(req,res) 
+BookRouter.post('/insertBooking', (req, res) => {
+    BookController.addBooking(req,res) 
+})
+BookRouter.get('/getBookService', (req, res) => {
+    BookController.getBookingInfo(req,res)
 })
 
 module.exports = BookRouter;

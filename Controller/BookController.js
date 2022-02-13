@@ -1,7 +1,10 @@
 const BookService = require("../Service/BookService")
 
 module.exports = {
-    postBook: (req,res) => {
+    addBooking: (req,res) => {
         BookService.inserBookService(req,res)
+    },
+    getBookingInfo: (req,res) => {
+        BookService.getBookInfo(req,res)
     }
 }

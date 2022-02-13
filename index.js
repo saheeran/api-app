@@ -5,7 +5,7 @@ const mysql = require('mysql');
 var bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
-const { authenticateToken } = require("./Auth/AuthService");
+const { authenticateToken, generateAccessToken } = require("./Auth/AuthService");
 const UsersRoute = require('./Routes/UsersRoute');
 const BookRoute = require('./Routes/BookRoute');
 const ServiceRoute = require("./Routes/ServiceRoute");
@@ -33,29 +33,41 @@ const PORT = 5000;
 app.listen(PORT, () => console.log("Server running on port: http://localhost:${PORT}"));
 
 //---------------------------------------Authication----------------------------------
-app.post('/register', (req, res) => {
-
+app.post('/register', async(req, res) => {
+    const salt = await bcrypt.genSalt(10);
+    const {username,password,name,email,tel,role_id} = req.body
+    const hashPasswor = await bcrypt.hash(password,salt)
+    connection.query(`INSERT INTO users (username,password,name,email,tel,role_id) VALUES(?,?,?,?,?,?)`,
+    [username,hashPasswor,name,email,tel,role_id],(err) =>{
+        if (err) {
+            res.send(err)
+        } else {
+            res.send({message:'สมัครเรียบร้อย'})
+        }
+    })
 })
-let refreshToken = []
+
+let refreshTokens = []
 app.post('/login', (req, res) => {
     const { password, username } = req.body
-    connection.query(`SELECT * FROM users WHERE password = ? AND username = ?`,
-        [password, username], ((err, result) => {
+    connection.query(`SELECT * FROM users 
+    INNER JOIN role_table ON role_table.role_id = users.role_id
+    WHERE users.username = ?`,
+        [username], ((err, result) => {
             if (err) {
-                console.log("err", err);
-                res.send({ err: err.message })
+                res.send({ err: err })
             } else {
                 if (result.length > 0) {
-                    bcrypt.compare(result[0].password, password).then((match) => {
+                    bcrypt.compare(password,result[0].password).then(async(match) => {
                         if (!match) {
                             res.status(400).json({ error: 'Wrong password and username combination' })
+                        }else{    
+                            const accessToken = generateAccessToken(result[0].username)
+                            const refreshToken = jwt.sign({username:result[0].username}, process.env.REFRESH_TOKEN_SECRET, { expiresIn:"7d"})
+                            refreshTokens.push(refreshToken)
+                            res.send({ accessToken: accessToken, userInfo: result[0], refreshToken: refreshToken })
                         }
-                        res.send('Logged in!')
                     })
-                    const acceessToken = jwt.sign(result[0].username, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '30m' })
-                    const refreshToken = jwt.sign(result[0].username, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '4d' })
-                    refreshToken.push(refreshToken)
-                    res.send({ acceessToken: acceessToken, userInfo: result, refreshToken: refreshToken })
                 } else {
                     res.send({ message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' })
                 }
@@ -68,10 +80,10 @@ app.post('/token', (req, res) => {
     if (refreshToken == null) return res.sendStatus(401)
     if (refreshToken.includes(refreshToken)) return res.sendStatus(403)
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, username) => {
-        if (ree) return res.sendStatus(403)
-        const acceessToken = 
+        if (err) return res.sendStatus(403)
+        const acceessToken = generateAccessToken({username:username})
+        res.send({acceessToken:acceessToken})
     })
-    
 })
 app.use('/user', authenticateToken, UsersRoute)
 app.use('/book', authenticateToken, BookRoute)

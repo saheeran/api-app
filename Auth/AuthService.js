@@ -11,8 +11,10 @@ module.exports = {
             next()
         })
     },
-    Refresh: (req, res) => {
-        const refreshToken = req.body.token
+    generateAccessToken: (username) => {
+        console.log('user',username);
+        const token = jwt.sign({username:username},process.env.ACCESS_TOKEN_SECRET,{expiresIn:"4h"})
+        return token
     }
     
 }
