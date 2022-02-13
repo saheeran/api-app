@@ -1,9 +1,9 @@
 const express = require("express");
-const EmployeeService = require("../Service/EmployeeService");
 const EmployeeRoute = express.Router();
+const EmployeeController = require("../Controller/EmployeeController");
 
-EmployeeRoute.get('/getEmployeeData', (req,res) => {
-    EmployeeService.getEmployee(req,res)
+EmployeeRoute.get('/getEmployeeData', (req, res) => {
+    EmployeeController.get(req, res)
 })
 
 module.exports = EmployeeRoute
